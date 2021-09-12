@@ -3,7 +3,7 @@
 # * https://github.com/supermarin/xcpretty#usage
 
 osx_image: xcode12.5
-language: swfit
+language: swift
 rvm:
  - 2.6.0
 cache: cocoapods
