@@ -4,6 +4,8 @@
 
 osx_image: xcode12.5
 language: swfit
+rvm:
+ - 2.6.0
 cache: cocoapods
 podfile: Example/Podfile
 before_install:
