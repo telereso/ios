@@ -105,6 +105,7 @@ public struct Telereso{
                     completionHandler?(changed)
                 }
             } else {
+                completionHandler?(false)
                 self.log("Config not fetched")
                 self.log("Error: \(error?.localizedDescription ?? "No error available.")")
             }
