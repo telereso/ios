@@ -1,13 +1,17 @@
 
 import FirebaseRemoteConfig
 import SwiftyJSON
+import SDWebImage
 
 
-internal let TAG = "Telereso"
-internal let TAG_STRINGS = "\(TAG)_strings"
-internal let TAG_DRAWABLES = "\(TAG)_drawable"
-private let STRINGS = "strings"
-private let DRAWABLE = "drawable"
+let TAG = "Telereso"
+let stringsKey: String = TGroup.strings.rawValue
+let drawableKey: String = TGroup.drawable.rawValue + "_" + "\(Int(UIScreen.main.scale))x"
+
+enum TGroup: String {
+    case strings = "strings"
+    case drawable = "drawables"
+}
 
 public struct Telereso{
     @available(*, unavailable) private init() {}
@@ -17,19 +21,41 @@ public struct Telereso{
     static private var isDrawableLogEnabled = false
     static private var _isRealTimeChangesEnabled = false
     
-    //    private var listenersList = hashSetOf<RemoteChanges>()
     static private var stringsMap = [String : [String : JSON]]()
-    static private var currentLocal: String?
-    //    private var drawableMap = HashMap<String, JSONObject>()
-    //    private var densityList = listOf("ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi")
-    //
-    
+    static private var drawablesMap = [String : JSON]()
+    static private var currentLocale: String = ""
+    static private var currentStringKey: String { "\(stringsKey)_\(currentLocale)" }
     static private var remoteConfigSettings: RemoteConfigSettings?
     static private var remoteConfig: RemoteConfig!
-        
-    static public func initialize(completionHandler: (() -> Void)? = nil){
+
+    static public func setRemoteConfigSettings(_ remoteConfigSettings: RemoteConfigSettings) -> Telereso.Type {
+        self.remoteConfigSettings = remoteConfigSettings;
+        return self
+    }
+
+    static public func enableStringLog() -> Telereso.Type {
+        isStringLogEnabled = true
+        return self
+    }
+    
+    static public func enableDrawableLog() -> Telereso.Type {
+        isDrawableLogEnabled = true
+        return self
+    }
+
+    static public func disableLog() -> Telereso.Type {
+        isLogEnabled = false
+        return self
+    }
+
+    static public func enableRealTimeChanges() -> Telereso.Type {
+        _isRealTimeChangesEnabled = true
+        return self
+    }
+
+    static public func initialize(languageCode:String, completionHandler: (() -> Void)? = nil) {
         log("Initializing...")
-        
+        currentLocale = languageCode
         remoteConfig = RemoteConfig.remoteConfig()
         var settings = remoteConfigSettings
         if(settings == nil){
@@ -40,61 +66,65 @@ public struct Telereso{
             settings = s
         }
         remoteConfig.configSettings = settings!
-        
-        
         fetchResource(){ (shouldUpdate) -> Void in
             if(shouldUpdate){
-                self.log("Fetched new data")
                 self.initMaps()
+                self.log("Fetched new data")
             }
             completionHandler?()
         }
-        
         initMaps()
-        
         log("Initialized!")
     }
     
-    static public func setRemoteConfigSettings(_ remoteConfigSettings: RemoteConfigSettings) -> Telereso.Type {
-        self.remoteConfigSettings = remoteConfigSettings;
-        return self
+    static private func initMaps() {
+        initStrings()
+        initDrawables()
     }
     
-    static public func enableStringLog() -> Telereso.Type {
-        isStringLogEnabled = true
-        return self
+    static private func initStrings() {
+        let defaultString = remoteConfig.configValue(forKey: currentStringKey).jsonValue
+        var defaultJson :[String : JSON]
+
+        if (defaultString == nil) {
+            defaultJson = JSON.init(parseJSON:"{}").dictionary ?? [:]
+            log("Your current local \(currentStringKey) was not found in remote config", true)
+        } else {
+            log("Current local \(currentStringKey) was setup")
+            defaultJson = JSON(defaultString!).dictionary ?? [:]
+        }
+        stringsMap[currentStringKey] = defaultJson
     }
     
-    static public func enableDrawableLog() -> Telereso.Type {
-        isDrawableLogEnabled = true
-        return self
+    static private func initDrawables() {
+        let defaultString = remoteConfig.configValue(forKey: drawableKey).jsonValue
+        var defaultJson :[String : JSON]
+
+        if (defaultString == nil) {
+            defaultJson = JSON.init(parseJSON:"{}").dictionary ?? [:]
+            log("Your default local \(drawableKey) was not found in remote config", true)
+        } else {
+            log("Default local \(drawableKey) was setup")
+            defaultJson = JSON(defaultString!).dictionary ?? [:]
+        }
+        drawablesMap = defaultJson
     }
     
-    static public func disableLog() -> Telereso.Type {
-        isLogEnabled = false
-        return self
-    }
-    
-    static public func enableRealTimeChanges() -> Telereso.Type {
-        _isRealTimeChangesEnabled = true
-        subscriptToChanges()
-        return self
-    }
-    
-    static public func getRemoteStringOrDefault(_ local: String,_ key: String,_ defaultValue: String? = nil) -> String {
+    static public func getRemoteStringOrDefault(_ local: String,_ key: String,
+                                                _ defaultValue: String? = nil) -> String {
         logStrings("******************** \(key) ********************")
         let value = getStringValue(local, key, defaultValue)
         logStrings("local:\(local) default:\(defaultValue ?? "") value:\(value)")
         if (value.isEmpty) {
-            logStrings("\(key) was empty in \(getStringKey(local)) and \(STRINGS) and local strings",true)
+            logStrings("\(key) was empty in \(getStringKey(local)) and \(stringsKey) and local strings",true)
             onResourceNotFound(key)
         }
         logStrings("*************************************************")
         return value
     }
     
-    static public func getRemoteString(_ key:String,_ comment:String = "") -> String{
-        return getRemoteStringOrDefault(getLocal(), key, NSLocalizedString(key, comment: comment))
+    static public func getRemoteString(_ key:String, _ comment:String = "") -> String {
+        return getRemoteStringOrDefault(currentLocale, key, NSLocalizedString(key, comment: comment))
     }
     
     static private func fetchResource(completionHandler: ((Bool) -> Void)? = nil) {
@@ -112,97 +142,44 @@ public struct Telereso{
         }
     }
     
-    static private func initMaps(){
-        //  strings
-        
-        let defaultString = remoteConfig.configValue(forKey: STRINGS).jsonValue
-        var defaultJson :[String : JSON]
-        
-        if (defaultString == nil) {
-            defaultJson = JSON.init(parseJSON:"{}").dictionary ?? [:]
-            log("Your default local \(STRINGS) was not found in remote config", true)
-        } else {
-            log("Default local \(STRINGS) was setup")
-            defaultJson = JSON(defaultString!).dictionary ?? [:]
-        }
-        stringsMap[STRINGS] = defaultJson
-        
-        let deviceLocal = getLocal()
-        currentLocal = deviceLocal
-        
-        let local = getRemoteLocal(deviceLocal)
-        
-        stringsMap[getStringKey(deviceLocal)] = JSON.init(parseJSON:local).dictionary ?? [:]
-        
-    }
-    
-    static private func getLocal() -> String{
-        return Bundle.main.preferredLocalizations.first ?? "en"
-    }
-    
-    static private func getRemoteLocal(_ deviceLocal: String) -> String {
-        var local = remoteConfig.configValue(forKey: getStringKey(deviceLocal)).stringValue ?? ""
-        if (local.isEmpty) {
-            let baseLocal = deviceLocal.split{$0 == "_"}[0].base
-            log("The app local \(deviceLocal) was not found in remote config will try \(baseLocal)")
-            let key = remoteConfig.keys(withPrefix: getStringKey(baseLocal)).first
-            if (key == nil) {
-                log("\(baseLocal) was not found as well")
-            } else {
-                if (key!.contains("off")){
-                    log("\(baseLocal) was found but it was turned off, remove _off suffix to enable it")
-                } else {
-                    local = remoteConfig.configValue(forKey: key).stringValue ?? ""
-                }
-            }
-        }
-        if (local.isEmpty) {
-            local = "{}"
-            log("The app local \(deviceLocal) was not found in remote config", true)
-        } else {
-            log("device local \(deviceLocal) was setup")
-        }
-        return local
-    }
-    
     static private func getStringValue(_ local: String, _ key: String, _ defaultValue: String?) -> String {
         let localId = getStringKey(local)
         var value = stringsMap[localId]?[key]?.string ?? ""
         if (value.isEmpty) {
             logStrings("\(key) was not found in remote \(localId)", true)
-            value = stringsMap[STRINGS]?[key]?.string ?? ""
+            value = stringsMap[stringsKey]?[key]?.string ?? ""
             if (value.isEmpty) {
-                logStrings("\(key) was not found in remote \(STRINGS)", true)
+                logStrings("\(key) was not found in remote \(stringsKey)", true)
                 value = defaultValue ?? ""
             } else {
-                logStrings("\(key) was found in remote \(STRINGS)")
+                logStrings("\(key) was found in remote \(stringsKey)")
             }
         }
         return value
     }
     
-    static private func onResourceNotFound(_ key :String){}
+    static fileprivate func getDrawableURLFor(key: String) -> URL? {
+        guard let url = drawablesMap[key]?.string else { return nil }
+        return URL(string: url)
+    }
     
-    static private func subscriptToChanges() {}
+    static private func onResourceNotFound(_ key :String){}
     
     static internal func isRealTimeChangesEnabled() -> Bool {
         return _isRealTimeChangesEnabled
     }
     
+
     static private func getStringKey(_ id: String) -> String {
-        return "\(STRINGS)_\(id)"
-    }
-    
-    static private func getDrawableKey(_ id: String) -> String {
-        return "\(DRAWABLE)_\(id)"
+        return "\(stringsKey)_\(id)"
     }
     
     static private func log(_ log: String, _ isWarning: Bool = false) {
         if (isLogEnabled){
             if (isWarning) {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             } else {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             }
         }
     }
@@ -210,9 +187,9 @@ public struct Telereso{
     static private func logStrings(_ log: String, _ isWarning: Bool = false) {
         if (isStringLogEnabled){
             if (isWarning) {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             } else {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             }
         }
     }
@@ -220,11 +197,68 @@ public struct Telereso{
     static private func logDrawables(log: String, _ isWarning: Bool = false) {
         if (isDrawableLogEnabled){
             if (isWarning) {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             } else {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             }
         }
     }
 }
 
+extension String{
+   public func remoteLocale() -> String {
+        Telereso.getRemoteString(self)
+    }
+}
+
+extension UIImageView {
+    public func setRemoteImageWith(key: String) {
+        guard let url = Telereso.getDrawableURLFor(key: key) else {
+            self.image = UIImage(named:key)
+            return
+        }
+        sd_setImage(
+            with: url,
+            placeholderImage: nil,
+            options: [.highPriority, .avoidAutoSetImage, .fromCacheOnly]) { [weak self] (cachedImage, error, cacheType, url) in
+                if let image = cachedImage, error == nil {
+                    self?.image = image
+                    return
+                }
+                self?.sd_setImage(with: url, placeholderImage: UIImage(named:key),
+                                  options: [.highPriority, .scaleDownLargeImages])
+            }
+    }
+}
+
+extension UIButton {
+
+    public func setRemoteImageWith(key: String, for state: UIControl.State) {
+        guard let url = Telereso.getDrawableURLFor(key: key) else {
+            self.setImage(UIImage(named:key), for: state)
+            return
+        }
+        sd_setImage(with: url, for: state, placeholderImage: nil, options: [.highPriority, .avoidAutoSetImage, .fromCacheOnly]) { [weak self] cachedImage, error, cacheType, url in
+            if let image = cachedImage, error == nil {
+                self?.setImage(image, for: state)
+                return
+            }
+            self?.sd_setImage(with: url, for: state, placeholderImage: UIImage(named:key), options: [.highPriority, .scaleDownLargeImages])
+        }
+    }
+
+    public func setRemoteBackgroundImageWith(key: String, for state: UIControl.State) {
+        guard let url = Telereso.getDrawableURLFor(key: key) else {
+            self.setBackgroundImage(UIImage(named:key), for: state)
+            return
+        }
+        sd_setBackgroundImage(with: url, for: state, placeholderImage: nil, options: [.highPriority, .avoidAutoSetImage, .fromCacheOnly]) { [weak self] cachedImage, error, cacheType, url in
+            if let image = cachedImage, error == nil {
+                self?.setImage(image, for: state)
+                self?.setBackgroundImage(image, for: state)
+                return
+            }
+            self?.sd_setBackgroundImage(with: url, for: state, placeholderImage: UIImage(named:key), options: [.highPriority, .scaleDownLargeImages])
+        }
+    }
+}
