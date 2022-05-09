@@ -7,7 +7,8 @@ internal let TAG = "Telereso"
 internal let TAG_STRINGS = "\(TAG)_strings"
 internal let TAG_DRAWABLES = "\(TAG)_drawable"
 private let STRINGS = "strings"
-private let DRAWABLE = "drawable"
+private let DRAWABLES = "drawables"
+private let SCALE_DRAWABLE_KEY = "\(DRAWABLES)" + "_" + "\(Int(UIScreen.main.scale))x"
 
 public struct Telereso{
     @available(*, unavailable) private init() {}
@@ -16,20 +17,15 @@ public struct Telereso{
     static private var isStringLogEnabled = false
     static private var isDrawableLogEnabled = false
     static private var _isRealTimeChangesEnabled = false
-    
-    //    private var listenersList = hashSetOf<RemoteChanges>()
     static private var stringsMap = [String : [String : JSON]]()
+    static private var drawablesMap = [String : [String : JSON]]()
     static private var currentLocal: String?
-    //    private var drawableMap = HashMap<String, JSONObject>()
-    //    private var densityList = listOf("ldpi", "mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi")
-    //
-    
     static private var remoteConfigSettings: RemoteConfigSettings?
     static private var remoteConfig: RemoteConfig!
-        
-    static public func initialize(completionHandler: (() -> Void)? = nil){
+
+    static public func initialize(locale: String? = nil, completionHandler: (() -> Void)? = nil) {
         log("Initializing...")
-        
+        currentLocal = locale
         remoteConfig = RemoteConfig.remoteConfig()
         var settings = remoteConfigSettings
         if(settings == nil){
@@ -49,9 +45,7 @@ public struct Telereso{
             }
             completionHandler?()
         }
-        
         initMaps()
-        
         log("Initialized!")
     }
     
@@ -113,31 +107,47 @@ public struct Telereso{
     }
     
     static private func initMaps(){
-        //  strings
-        
-        let defaultString = remoteConfig.configValue(forKey: STRINGS).jsonValue
+        initStrings()
+        initDrawables()
+    }
+
+    static private func initStrings() {
+        let defaultStrings = remoteConfig.configValue(forKey: STRINGS).jsonValue
         var defaultJson :[String : JSON]
         
-        if (defaultString == nil) {
+        if (defaultStrings == nil) {
             defaultJson = JSON.init(parseJSON:"{}").dictionary ?? [:]
             log("Your default local \(STRINGS) was not found in remote config", true)
         } else {
             log("Default local \(STRINGS) was setup")
-            defaultJson = JSON(defaultString!).dictionary ?? [:]
+            defaultJson = JSON(defaultStrings!).dictionary ?? [:]
         }
         stringsMap[STRINGS] = defaultJson
         
         let deviceLocal = getLocal()
-        currentLocal = deviceLocal
-        
         let local = getRemoteLocal(deviceLocal)
-        
         stringsMap[getStringKey(deviceLocal)] = JSON.init(parseJSON:local).dictionary ?? [:]
-        
+    }
+    
+    static private func initDrawables() {
+        let defaultDrawables = remoteConfig.configValue(forKey: DRAWABLES).jsonValue
+        var defaultJson :[String : JSON]
+
+        if (defaultDrawables == nil) {
+            defaultJson = JSON.init(parseJSON:"{}").dictionary ?? [:]
+            log("Your default local \(DRAWABLES) was not found in remote config", true)
+        } else {
+            log("Default local \(DRAWABLES) was setup")
+            defaultJson = JSON(defaultDrawables!).dictionary ?? [:]
+        }
+        drawablesMap[DRAWABLES] = defaultJson
+        let drawableValue = getRemoteDrawables(SCALE_DRAWABLE_KEY)
+        drawablesMap[SCALE_DRAWABLE_KEY] = JSON.init(parseJSON:drawableValue).dictionary ?? [:]
     }
     
     static private func getLocal() -> String{
-        return Bundle.main.preferredLocalizations.first ?? "en"
+        guard let locale = currentLocal else { return Bundle.main.preferredLocalizations.first ?? "en" }
+        return locale
     }
     
     static private func getRemoteLocal(_ deviceLocal: String) -> String {
@@ -165,6 +175,31 @@ public struct Telereso{
         return local
     }
     
+    static private func getRemoteDrawables(_ drawableKey: String) -> String {
+        var drawableValue = remoteConfig.configValue(forKey: drawableKey).stringValue ?? ""
+        if (drawableValue.isEmpty) {
+            let baseDrawable = drawableKey.split{$0 == "_"}[0].base
+            log("The app drawable \(drawableKey) was not found in remote config will try \(baseDrawable)")
+            let key = remoteConfig.keys(withPrefix: getStringKey(baseDrawable)).first
+            if (key == nil) {
+                log("\(baseDrawable) was not found as well")
+            } else {
+                if (key!.contains("off")){
+                    log("\(baseDrawable) was found but it was turned off, remove _off suffix to enable it")
+                } else {
+                    drawableValue = remoteConfig.configValue(forKey: key).stringValue ?? ""
+                }
+            }
+        }
+        if (drawableValue.isEmpty) {
+            drawableValue = "{}"
+            log("The app drawable \(drawableKey) was not found in remote config", true)
+        } else {
+            log("device drawable \(drawableKey) was setup")
+        }
+        return drawableValue
+    }
+    
     static private func getStringValue(_ local: String, _ key: String, _ defaultValue: String?) -> String {
         let localId = getStringKey(local)
         var value = stringsMap[localId]?[key]?.string ?? ""
@@ -181,6 +216,19 @@ public struct Telereso{
         return value
     }
     
+    static internal func getRemoteDrawable(key: String) -> URL? {
+        var url = drawablesMap[SCALE_DRAWABLE_KEY]?[key]?.string ?? ""
+        if url.isEmpty {
+            logDrawables("\(key) was not found in remote \(SCALE_DRAWABLE_KEY)", true)
+            url = drawablesMap[DRAWABLES]?[key]?.string ?? ""
+            if url.isEmpty {
+                logDrawables("\(key) was not found in remote \(DRAWABLES)", true)
+            }
+        }
+        guard !url.isEmpty else { return nil }
+        return URL(string: url)
+    }
+    
     static private func onResourceNotFound(_ key :String){}
     
     static private func subscriptToChanges() {}
@@ -194,15 +242,15 @@ public struct Telereso{
     }
     
     static private func getDrawableKey(_ id: String) -> String {
-        return "\(DRAWABLE)_\(id)"
+        return "\(DRAWABLES)_\(id)"
     }
     
     static private func log(_ log: String, _ isWarning: Bool = false) {
         if (isLogEnabled){
             if (isWarning) {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             } else {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             }
         }
     }
@@ -210,19 +258,19 @@ public struct Telereso{
     static private func logStrings(_ log: String, _ isWarning: Bool = false) {
         if (isStringLogEnabled){
             if (isWarning) {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             } else {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             }
         }
     }
     
-    static private func logDrawables(log: String, _ isWarning: Bool = false) {
+    static private func logDrawables(_ log: String, _ isWarning: Bool = false) {
         if (isDrawableLogEnabled){
             if (isWarning) {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             } else {
-                print("\(TAG):  \(log)")
+                debugPrint("\(TAG):  \(log)")
             }
         }
     }

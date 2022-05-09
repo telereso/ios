@@ -7,10 +7,9 @@ target 'Telereso_Example' do
   pod 'Firebase/Analytics'
   pod 'Firebase/Messaging'
   pod 'Firebase/RemoteConfig'
+  pod 'SDWebImage'
 
   target 'Telereso_Tests' do
     inherit! :search_paths
-
-    
   end
 end
