@@ -7,8 +7,8 @@ internal let TAG = "Telereso"
 internal let TAG_STRINGS = "\(TAG)_strings"
 internal let TAG_DRAWABLES = "\(TAG)_drawable"
 private let STRINGS = "strings"
-private let DRAWABLE = "drawables"
-private let SCALE_DRAWABLE_KEY = "\(DRAWABLE)" + "_" + "\(Int(UIScreen.main.scale))x"
+private let DRAWABLES = "drawables"
+private let SCALE_DRAWABLE_KEY = "\(DRAWABLES)" + "_" + "\(Int(UIScreen.main.scale))x"
 
 public struct Telereso{
     @available(*, unavailable) private init() {}
@@ -112,15 +112,15 @@ public struct Telereso{
     }
 
     static private func initStrings() {
-        let defaultString = remoteConfig.configValue(forKey: STRINGS).jsonValue
+        let defaultStrings = remoteConfig.configValue(forKey: STRINGS).jsonValue
         var defaultJson :[String : JSON]
         
-        if (defaultString == nil) {
+        if (defaultStrings == nil) {
             defaultJson = JSON.init(parseJSON:"{}").dictionary ?? [:]
             log("Your default local \(STRINGS) was not found in remote config", true)
         } else {
             log("Default local \(STRINGS) was setup")
-            defaultJson = JSON(defaultString!).dictionary ?? [:]
+            defaultJson = JSON(defaultStrings!).dictionary ?? [:]
         }
         stringsMap[STRINGS] = defaultJson
         
@@ -130,18 +130,18 @@ public struct Telereso{
     }
     
     static private func initDrawables() {
-        let defaultString = remoteConfig.configValue(forKey: DRAWABLE).jsonValue
+        let defaultDrawables = remoteConfig.configValue(forKey: DRAWABLES).jsonValue
         var defaultJson :[String : JSON]
 
-        if (defaultString == nil) {
+        if (defaultDrawables == nil) {
             defaultJson = JSON.init(parseJSON:"{}").dictionary ?? [:]
-            log("Your default local \(DRAWABLE) was not found in remote config", true)
+            log("Your default local \(DRAWABLES) was not found in remote config", true)
         } else {
-            log("Default local \(DRAWABLE) was setup")
-            defaultJson = JSON(defaultString!).dictionary ?? [:]
+            log("Default local \(DRAWABLES) was setup")
+            defaultJson = JSON(defaultDrawables!).dictionary ?? [:]
         }
-        drawablesMap[DRAWABLE] = defaultJson
-        let drawableValue = getDrawableValue(SCALE_DRAWABLE_KEY)
+        drawablesMap[DRAWABLES] = defaultJson
+        let drawableValue = getRemoteDrawables(SCALE_DRAWABLE_KEY)
         drawablesMap[SCALE_DRAWABLE_KEY] = JSON.init(parseJSON:drawableValue).dictionary ?? [:]
     }
     
@@ -175,9 +175,9 @@ public struct Telereso{
         return local
     }
     
-    static private func getDrawableValue(_ drawableKey: String) -> String {
+    static private func getRemoteDrawables(_ drawableKey: String) -> String {
         var drawableValue = remoteConfig.configValue(forKey: drawableKey).stringValue ?? ""
-        if (drawableKey.isEmpty) {
+        if (drawableValue.isEmpty) {
             let baseDrawable = drawableKey.split{$0 == "_"}[0].base
             log("The app drawable \(drawableKey) was not found in remote config will try \(baseDrawable)")
             let key = remoteConfig.keys(withPrefix: getStringKey(baseDrawable)).first
@@ -220,9 +220,9 @@ public struct Telereso{
         var url = drawablesMap[SCALE_DRAWABLE_KEY]?[key]?.string ?? ""
         if url.isEmpty {
             logDrawables("\(key) was not found in remote \(SCALE_DRAWABLE_KEY)", true)
-            url = drawablesMap[DRAWABLE]?[key]?.string ?? ""
+            url = drawablesMap[DRAWABLES]?[key]?.string ?? ""
             if url.isEmpty {
-                logDrawables("\(key) was not found in remote \(DRAWABLE)", true)
+                logDrawables("\(key) was not found in remote \(DRAWABLES)", true)
             }
         }
         guard !url.isEmpty else { return nil }
@@ -242,7 +242,7 @@ public struct Telereso{
     }
     
     static private func getDrawableKey(_ id: String) -> String {
-        return "\(DRAWABLE)_\(id)"
+        return "\(DRAWABLES)_\(id)"
     }
     
     static private func log(_ log: String, _ isWarning: Bool = false) {

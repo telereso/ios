@@ -6,9 +6,9 @@
 //
 
 extension UIImageView {
-    public func setRemoteImageWith(key: String) {
+    public func setRemoteImageWith(key: String, placeholderImage: String? = nil) {
         guard let url = Telereso.getRemoteDrawable(key: key) else {
-            self.image = UIImage(named:key)
+            self.image = UIImage(named:placeholderImage ?? key)
             return
         }
         sd_setImage(
@@ -19,7 +19,7 @@ extension UIImageView {
                     self?.image = image
                     return
                 }
-                self?.sd_setImage(with: url, placeholderImage: UIImage(named:key),
+                self?.sd_setImage(with: url, placeholderImage: UIImage(named:placeholderImage ?? key),
                                   options: [.highPriority, .scaleDownLargeImages])
             }
     }
