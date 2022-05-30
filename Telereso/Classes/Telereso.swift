@@ -77,18 +77,24 @@ public struct Telereso{
     
     static public func getRemoteStringOrDefault(_ local: String,_ key: String,_ defaultValue: String? = nil) -> String {
         logStrings("******************** \(key) ********************")
-        let value = getStringValue(local, key, defaultValue)
+        var value = getStringValue(local, key, defaultValue)
         logStrings("local:\(local) default:\(defaultValue ?? "") value:\(value)")
         if (value.isEmpty) {
             logStrings("\(key) was empty in \(getStringKey(local)) and \(STRINGS) and local strings",true)
             onResourceNotFound(key)
+        } else {
+            value = value.replacingOccurrences(of: "%s", with: "%@")
         }
         logStrings("*************************************************")
         return value
     }
     
-    static public func getRemoteString(_ key:String,_ comment:String = "") -> String{
+    static public func getRemoteString(_ key: String,_ comment:String = "") -> String {
         return getRemoteStringOrDefault(getLocal(), key, NSLocalizedString(key, comment: comment))
+    }
+    
+    static public func getRemoteString(_ key: String,_ comment:String = "", args: [CVarArg]) -> String {
+        return Self.getRemoteString(key, comment).stringWithParams(args)
     }
     
     static private func fetchResource(completionHandler: ((Bool) -> Void)? = nil) {
