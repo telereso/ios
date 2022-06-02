@@ -25,7 +25,7 @@ public struct Telereso{
 
     static public func initialize(locale: String? = nil, completionHandler: (() -> Void)? = nil) {
         log("Initializing...")
-        currentLocal = locale
+        currentLocal = locale?.lowercased().replacingOccurrences(of: "-", with: "_")
         remoteConfig = RemoteConfig.remoteConfig()
         var settings = remoteConfigSettings
         if(settings == nil){
@@ -159,7 +159,7 @@ public struct Telereso{
     static private func getRemoteLocal(_ deviceLocal: String) -> String {
         var local = remoteConfig.configValue(forKey: getStringKey(deviceLocal)).stringValue ?? ""
         if (local.isEmpty) {
-            let baseLocal = deviceLocal.split{$0 == "_"}[0].base
+            let baseLocal = deviceLocal.split{$0 == "_"}.first.map(String.init) ?? ""
             log("The app local \(deviceLocal) was not found in remote config will try \(baseLocal)")
             let key = remoteConfig.keys(withPrefix: getStringKey(baseLocal)).first
             if (key == nil) {
@@ -184,7 +184,7 @@ public struct Telereso{
     static private func getRemoteDrawables(_ drawableKey: String) -> String {
         var drawableValue = remoteConfig.configValue(forKey: drawableKey).stringValue ?? ""
         if (drawableValue.isEmpty) {
-            let baseDrawable = drawableKey.split{$0 == "_"}[0].base
+            let baseDrawable = drawableKey.split{$0 == "_"}.first.map(String.init) ?? ""
             log("The app drawable \(drawableKey) was not found in remote config will try \(baseDrawable)")
             let key = remoteConfig.keys(withPrefix: getStringKey(baseDrawable)).first
             if (key == nil) {
