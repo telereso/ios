@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'Telereso'
-  s.version          = '0.0.7-alpha'
+  s.version          = '0.0.7-alpha.3'
   s.summary          = 'Control your app resources remotely.'
 
 # This description is used to generate tags and improve search results.
