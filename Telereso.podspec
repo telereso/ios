@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'Telereso'
-  s.version          = '0.0.6'
+  s.version          = '0.0.7-alpha'
   s.summary          = 'Control your app resources remotely.'
 
 # This description is used to generate tags and improve search results.
@@ -45,5 +45,12 @@ currently support string localization, in upcoming versions will support images 
   s.dependency 'Firebase/RemoteConfig', '8.14.0'
   s.dependency 'SwiftyJSON', '>= 4.0'
   s.dependency 'SDWebImage'
+  
+  s.pod_target_xcconfig = {
+    'FRAMEWORK_SEARCH_PATHS' => '$(inherited) $(PODS_ROOT)/Firebase $(PODS_ROOT)/FirebaseCore/Frameworks $(PODS_ROOT)/FirebaseRemoteConfig/Frameworks'
+
+  s.pod_target_xcconfig = {
+    'OTHER_LDFLAGS' => '$(inherited) -ObjC'
+  }
 
 end
