@@ -33,7 +33,7 @@ currently support string localization, in upcoming versions will support images 
   s.swift_versions = '5.0'
 
   s.source_files = 'Telereso/Classes/**/*'
-
+  s.static_framework = true
   # s.resource_bundles = {
   #   'Telereso' => ['Telereso/Assets/*.png']
   # }
