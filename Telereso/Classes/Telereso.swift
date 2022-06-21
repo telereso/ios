@@ -24,19 +24,19 @@ public struct Telereso{
             stringsMapQueue.sync { _stringsMap }
         }
         set {
-            stringsMapQueue.async {
+            stringsMapQueue.async(flags: .barrier) {
                 _stringsMap = newValue
             }
         }
     }
     static private let drawablesMapQueue: DispatchQueue = DispatchQueue(label: "teleresoDrawablesMapQueue", attributes: .concurrent)
     static private var _drawablesMap = [String : [String : JSON]]()
-    static private var drawablesMap: [String : [String : JSON]]{
+    static private var drawablesMap: [String : [String : JSON]] {
         get {
             drawablesMapQueue.sync { _drawablesMap }
         }
         set {
-            drawablesMapQueue.async {
+            drawablesMapQueue.async(flags: .barrier) {
                 _drawablesMap = newValue
             }
         }
@@ -117,13 +117,20 @@ public struct Telereso{
     }
 
     static func getDefaultValue(_ key: String) -> String {
-        let expected = NSLocalizedString(key, comment: "")
-        if expected != key || getLocal().starts(with: "en") {
-          return expected
+        var expected = NSLocalizedString(key, comment: "")
+        if expected != key {
+            return expected
         }
         if let path = Bundle.main.path(forResource: "Base", ofType: "lproj"),
-          let bundle = Bundle(path: path) {
-          return NSLocalizedString(key, bundle: bundle, comment: "")
+           let bundle = Bundle(path: path) {
+            expected = NSLocalizedString(key, bundle: bundle, comment: "")
+            if expected != key {
+                return expected
+            }
+        }
+        if let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
+           let bundle = Bundle(path: path) {
+            return NSLocalizedString(key, bundle: bundle, comment: "")
         }
         return expected
     }
