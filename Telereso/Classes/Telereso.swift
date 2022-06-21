@@ -17,8 +17,31 @@ public struct Telereso{
     static private var isStringLogEnabled = false
     static private var isDrawableLogEnabled = false
     static private var _isRealTimeChangesEnabled = false
-    static private var stringsMap = [String : [String : JSON]]()
-    static private var drawablesMap = [String : [String : JSON]]()
+    static private let stringsMapQueue: DispatchQueue = DispatchQueue(label: "teleresoStringsMapQueue", attributes: .concurrent)
+    static private var _stringsMap = [String : [String : JSON]]()
+    static private var stringsMap: [String : [String : JSON]] {
+        get {
+            stringsMapQueue.sync { _stringsMap }
+        }
+        set {
+            stringsMapQueue.async(flags: .barrier) {
+                _stringsMap = newValue
+            }
+        }
+    }
+    static private let drawablesMapQueue: DispatchQueue = DispatchQueue(label: "teleresoDrawablesMapQueue", attributes: .concurrent)
+    static private var _drawablesMap = [String : [String : JSON]]()
+    static private var drawablesMap: [String : [String : JSON]] {
+        get {
+            drawablesMapQueue.sync { _drawablesMap }
+        }
+        set {
+            drawablesMapQueue.async(flags: .barrier) {
+                _drawablesMap = newValue
+            }
+        }
+    }
+
     static private var currentLocal: String?
     static private var remoteConfigSettings: RemoteConfigSettings?
     static private var remoteConfig: RemoteConfig!
@@ -90,7 +113,26 @@ public struct Telereso{
     }
     
     static public func getRemoteString(_ key: String,_ comment:String = "") -> String {
-        return getRemoteStringOrDefault(getLocal(), key, NSLocalizedString(key, comment: comment))
+        return getRemoteStringOrDefault(getLocal(), key, getDefaultValue(key))
+    }
+
+    static func getDefaultValue(_ key: String) -> String {
+        var expected = NSLocalizedString(key, comment: "")
+        if expected != key {
+            return expected
+        }
+        if let path = Bundle.main.path(forResource: "Base", ofType: "lproj"),
+           let bundle = Bundle(path: path) {
+            expected = NSLocalizedString(key, bundle: bundle, comment: "")
+            if expected != key {
+                return expected
+            }
+        }
+        if let path = Bundle.main.path(forResource: "en", ofType: "lproj"),
+           let bundle = Bundle(path: path) {
+            return NSLocalizedString(key, bundle: bundle, comment: "")
+        }
+        return expected
     }
     
     static public func getRemoteString(_ key: String,_ comment:String = "", args: [CVarArg]) -> String {
@@ -151,7 +193,7 @@ public struct Telereso{
         drawablesMap[SCALE_DRAWABLE_KEY] = JSON.init(parseJSON:drawableValue).dictionary ?? [:]
     }
     
-    static private func getLocal() -> String{
+    static private func getLocal() -> String {
         guard let locale = currentLocal else { return Bundle.main.preferredLocalizations.first ?? "en" }
         return locale
     }
@@ -208,10 +250,10 @@ public struct Telereso{
     
     static private func getStringValue(_ local: String, _ key: String, _ defaultValue: String?) -> String {
         let localId = getStringKey(local)
-        var value = stringsMap[localId]?[key]?.string ?? ""
+        var value = stringsMap[localId]?[key]?.stringValue ?? ""
         if (value.isEmpty) {
             logStrings("\(key) was not found in remote \(localId)", true)
-            value = stringsMap[STRINGS]?[key]?.string ?? ""
+            value = stringsMap[STRINGS]?[key]?.stringValue ?? ""
             if (value.isEmpty) {
                 logStrings("\(key) was not found in remote \(STRINGS)", true)
                 value = defaultValue ?? ""
@@ -223,10 +265,10 @@ public struct Telereso{
     }
     
     static internal func getRemoteDrawable(key: String) -> URL? {
-        var url = drawablesMap[SCALE_DRAWABLE_KEY]?[key]?.string ?? ""
+        var url = drawablesMap[SCALE_DRAWABLE_KEY]?[key]?.stringValue ?? ""
         if url.isEmpty {
             logDrawables("\(key) was not found in remote \(SCALE_DRAWABLE_KEY)", true)
-            url = drawablesMap[DRAWABLES]?[key]?.string ?? ""
+            url = drawablesMap[DRAWABLES]?[key]?.stringValue ?? ""
             if url.isEmpty {
                 logDrawables("\(key) was not found in remote \(DRAWABLES)", true)
             }
