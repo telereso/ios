@@ -46,7 +46,9 @@ public struct Telereso{
     static private var remoteConfigSettings: RemoteConfigSettings?
     static private var remoteConfig: RemoteConfig!
 
-    static public func initialize(locale: String? = nil, completionHandler: (() -> Void)? = nil) {
+    static public func initialize(locale: String? = nil,
+                                  waitFetch: Bool = false,
+                                  completionHandler: (() -> Void)? = nil) {
         log("Initializing...")
         currentLocal = locale?.lowercased().replacingOccurrences(of: "-", with: "_")
         remoteConfig = RemoteConfig.remoteConfig()
@@ -60,15 +62,21 @@ public struct Telereso{
         }
         remoteConfig.configSettings = settings!
         
-        
-        fetchResource(){ (shouldUpdate) -> Void in
-            if(shouldUpdate){
-                self.log("Fetched new data")
-                self.initMaps()
+        self.remoteConfig.activate { changed, error in
+            initMaps()
+            if !waitFetch {
+                completionHandler?()
             }
-            completionHandler?()
+            fetchResource(){ (shouldUpdate) -> Void in
+                if(shouldUpdate){
+                    self.initMaps()
+                    self.log("Fetched new data")
+                }
+                if waitFetch {
+                    completionHandler?()
+                }
+            }
         }
-        initMaps()
         log("Initialized!")
     }
     
