@@ -61,20 +61,19 @@ public struct Telereso{
             settings = s
         }
         remoteConfig.configSettings = settings!
-        
+        fetchResource(){ (shouldUpdate) -> Void in
+            if(shouldUpdate){
+                self.initMaps()
+                self.log("Fetched new data")
+            }
+            if waitFetch {
+                completionHandler?()
+            }
+        }
         self.remoteConfig.activate { changed, error in
             initMaps()
             if !waitFetch {
                 completionHandler?()
-            }
-            fetchResource(){ (shouldUpdate) -> Void in
-                if(shouldUpdate){
-                    self.initMaps()
-                    self.log("Fetched new data")
-                }
-                if waitFetch {
-                    completionHandler?()
-                }
             }
         }
         log("Initialized!")
