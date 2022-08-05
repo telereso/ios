@@ -147,16 +147,18 @@ public struct Telereso{
     }
     
     static private func fetchResource(completionHandler: ((Bool) -> Void)? = nil) {
-        remoteConfig.fetch { (status, error) -> Void in
-            if status == .success {
-                self.log("Config fetched!")
-                self.remoteConfig.activate { changed, error in
-                    completionHandler?(changed)
+        DispatchQueue.global(qos: .background).async {
+            remoteConfig.fetch { (status, error) -> Void in
+                if status == .success {
+                    self.log("Config fetched!")
+                    self.remoteConfig.activate { changed, error in
+                        completionHandler?(changed)
+                    }
+                } else {
+                    completionHandler?(false)
+                    self.log("Config not fetched")
+                    self.log("Error: \(error?.localizedDescription ?? "No error available.")")
                 }
-            } else {
-                completionHandler?(false)
-                self.log("Config not fetched")
-                self.log("Error: \(error?.localizedDescription ?? "No error available.")")
             }
         }
     }
