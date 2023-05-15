@@ -20,10 +20,20 @@ it, simply add the following line to your Podfile:
 pod 'Telereso'
 ```
 
-## Author
-
-ahmed.alnaami92@gmail.com
-
 ## License
 
 Telereso is available under the MIT license. See the LICENSE file for more info.
+
+
+## Publish 
+* make sure to register your email locally first 
+  ```shell
+  pod trunk register <email>
+  ```
+* Update [Telereso.podspec](Telereso.podspec) 
+  `s.version          = '<new-version>'`
+* Create Tag `<new-version>`
+* Run command
+  ```shell
+  pod trunk push Telereso.podspec
+  ```
