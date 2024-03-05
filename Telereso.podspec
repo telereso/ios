@@ -8,7 +8,7 @@
 
 Pod::Spec.new do |s|
   s.name             = 'Telereso'
-  s.version          = '0.0.11'
+  s.version          = '0.0.12'
   s.summary          = 'Control your app resources remotely.'
 
 # This description is used to generate tags and improve search results.
@@ -41,8 +41,8 @@ currently support string localization, in upcoming versions will support images 
   # s.public_header_files = 'Pod/Classes/**/*.h'
   # s.frameworks = 'UIKit', 'MapKit'
   # s.dependency 'AFNetworking', '~> 2.3'
-  s.dependency 'Firebase/Core', '10.15.0'
-  s.dependency 'Firebase/RemoteConfig', '10.15.0'
+  s.dependency 'Firebase/Core', '~> 10.21.0'
+  s.dependency 'Firebase/RemoteConfig', '~> 10.21.0'
   s.dependency 'SwiftyJSON', '>= 4.0'
   s.dependency 'SDWebImage'
   
