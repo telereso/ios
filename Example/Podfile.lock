@@ -125,10 +125,10 @@ PODS:
   - SDWebImage/Core (5.19.1)
   - SwiftyJSON (5.0.1)
   - Telereso (0.0.13):
-    - Firebase/Core (~> 10.24.0)
-    - Firebase/RemoteConfig (~> 10.24.0)
+    - Firebase/Core
+    - Firebase/RemoteConfig
     - SDWebImage
-    - SwiftyJSON (>= 4.0)
+    - SwiftyJSON
 
 DEPENDENCIES:
   - Firebase/Analytics
@@ -179,7 +179,7 @@ SPEC CHECKSUMS:
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   SDWebImage: 40b0b4053e36c660a764958bff99eed16610acbb
   SwiftyJSON: 2f33a42c6fbc52764d96f13368585094bfd8aa5e
-  Telereso: 2d45faa736a88cc053960da781b8b73ff4691b67
+  Telereso: 4789bc5a73802c8073d16dedaac7ce23dad860f0
 
 PODFILE CHECKSUM: 343eefdca3c54dc51828193e173e639301ded383
 

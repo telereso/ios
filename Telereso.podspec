@@ -41,9 +41,9 @@ currently support string localization, in upcoming versions will support images 
   # s.public_header_files = 'Pod/Classes/**/*.h'
   # s.frameworks = 'UIKit', 'MapKit'
   # s.dependency 'AFNetworking', '~> 2.3'
-  s.dependency 'Firebase/Core', '~> 10.24.0'
-  s.dependency 'Firebase/RemoteConfig', '~> 10.24.0'
-  s.dependency 'SwiftyJSON', '>= 4.0'
+  s.dependency 'Firebase/Core'
+  s.dependency 'Firebase/RemoteConfig'
+  s.dependency 'SwiftyJSON'
   s.dependency 'SDWebImage'
   
   s.pod_target_xcconfig = {
